@@ -118,8 +118,8 @@ TileImagesPtr PlanetTileImagesLoader::load(const QuadTreeTileKey& key, std::func
 			auto bounds = getKeyLonLatBounds<osg::Vec2>(key);
 			osg::Vec2 heightImageLonLatDelta = bounds.size();
 			osg::Vec2 texelWorldSize = osg::Vec2f(
-				heightImageLonLatDelta.y() * mPlanetRadius * std::cos(bounds.center().x()) / heightImage->s(),
-				heightImageLonLatDelta.x() * mPlanetRadius / heightImage->t()
+				heightImageLonLatDelta.x() * mPlanetRadius * std::cos(bounds.center().y()) / heightImage->s(),
+				heightImageLonLatDelta.y() * mPlanetRadius / heightImage->t()
 			);
 			images->normalMapImage = createNormalmapFromHeightmap(*heightImage, texelWorldSize);
 

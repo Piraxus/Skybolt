@@ -21,7 +21,7 @@ vec3 getTerrainNormalFromDxt5n(vec4 color)
 vec3 getTerrainNormalFromRG(vec4 color)
 {
 	vec2 xz = color.rg * 2 - 1;
-	float y = sqrt(1.0f - xz.x * xz.x - xz.y * xz.y);
+	float y = sqrt(max(0, 1.0f - dot(xz, xz)));
 	return vec3(xz.x, y, xz.y);
 }
 
