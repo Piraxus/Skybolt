@@ -15,7 +15,7 @@ void addShadowMapsToStateSet(const ShadowMaps& shadowMaps, osg::StateSet& stateS
 	for (int i = 0; i < (int)shadowMaps.size(); ++i)
 	{
 		stateSet.setTextureAttributeAndModes(firstTextureUnitIndex, shadowMaps[i]);
-		stateSet.addUniform(createUniformSampler2d("shadowSampler" + std::to_string(i), firstTextureUnitIndex++));
+		stateSet.addUniform(createUniformSampler2dShadow("shadowSampler" + std::to_string(i), firstTextureUnitIndex++));
 	}
 }
 

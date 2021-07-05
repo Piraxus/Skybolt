@@ -7,9 +7,9 @@
 #pragma once
 
 #include "SkyboltVis/SkyboltVisFwd.h"
-#include "SkyboltVis/ShadowHelpers.h"
 #include "SkyboltVis/Renderable/Planet/Features/PlanetFeaturesSource.h"
 #include "SkyboltVis/Renderable/Water/LakesBatch.h"
+#include "SkyboltVis/Shadow/ShadowHelpers.h"
 
 #include <SkyboltCommon/File/FileLocator.h>
 #include <SkyboltCommon/Math/QuadTree.h>

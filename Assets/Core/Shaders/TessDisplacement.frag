@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-#version 330 core
+#version 440 core
 #pragma import_defines ( ENABLE_CLOUDS )
 #pragma import_defines ( ENABLE_SHADOWS )
 #pragma import_defines ( ENABLE_DETAIL_ALBEDO_TEXTURES )
@@ -155,7 +155,7 @@ vec4 blend(vec4 texture1, float a1, vec4 texture2, float a2)
     float b2 = max(texture2.a + a2 - ma, 0);  
   
     return (texture1 * b1 + texture2 * b2) / (b1 + b2);  
-}  
+}
 
 vec4 sampleDetailAlbedo(int i, vec3 normal, vec3 texCoord, vec2 normalUv)
 {
@@ -295,12 +295,11 @@ void main()
 #endif
 
 	float snowCoverage = 0.0;
-	vec4 attributeColor = sampleAttributeDetailTextures(normal, normalUv);
-
 	vec3 albedo = texture(overallAlbedoSampler, texCoord.xy * overallAlbedoMapUvScale + overallAlbedoMapUvOffset).rgb;
 
 
 #ifdef ENABLE_DETAIL_ALBEDO_TEXTURES
+	vec4 attributeColor = sampleAttributeDetailTextures(normal, normalUv);
 	float albedoBlend = clamp(length(position_worldSpace) / 4000, 0.0, 1.0);
 	vec3 filteredAlbedo = texture(attributeSampler, texCoord.xy * attributeMapUvScale + attributeMapUvOffset).rgb;
 	albedo = mix(filteredAlbedo+1.0*(attributeColor.ggg-0.5), albedo, albedoBlend);

@@ -8,9 +8,9 @@
 
 #include "OsgTile.h"
 #include "TileTexture.h"
-#include "SkyboltVis/ShadowHelpers.h"
 #include "SkyboltVis/SkyboltVisFwd.h"
 #include "SkyboltVis/Renderable/Planet/Terrain.h"
+#include "SkyboltVis/Shadow/ShadowHelpers.h"
 #include <SkyboltCommon/Math/QuadTree.h>
 
 #include <osg/Image>

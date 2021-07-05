@@ -7,7 +7,7 @@
 #pragma once
 
 #include "DefaultRootNode.h"
-#include "ShadowHelpers.h"
+#include "Shadow/ShadowHelpers.h"
 
 namespace skybolt {
 namespace vis {

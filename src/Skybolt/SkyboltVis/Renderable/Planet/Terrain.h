@@ -8,7 +8,7 @@
 
 #include "SkyboltVis/DefaultRootNode.h"
 #include "SkyboltVis/OsgBox2.h"
-#include "SkyboltVis/ShadowHelpers.h"
+#include "SkyboltVis/Shadow/ShadowHelpers.h"
 #include <osg/Texture2D>
 
 #include <boost/optional.hpp>

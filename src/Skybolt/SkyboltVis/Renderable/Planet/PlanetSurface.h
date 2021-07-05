@@ -10,7 +10,6 @@
 #include "SkyboltVis/SkyboltVisFwd.h"
 #include "SkyboltVis/OsgBox2.h"
 #include "SkyboltVis/VisObject.h"
-#include "SkyboltVis/ShadowHelpers.h"
 #include "SkyboltVis/Renderable/Forest/GpuForest.h"
 #include "SkyboltVis/Renderable/Planet/Tile/OsgTileFactory.h"
 #include "SkyboltVis/Renderable/Planet/Tile/QuadTreeTileLoader.h"

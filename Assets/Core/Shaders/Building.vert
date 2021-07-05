@@ -55,6 +55,6 @@ void main()
 #ifdef ENABLE_CLOUDS
 	sunIrradiance *= sampleCloudShadowMaskAtPositionRelPlanet(cloudSampler, positionRelPlanet, lightDirection);
 #endif
-	shadowTexCoord = (shadowProjectionMatrix * positionWS).xyz;
+	shadowTexCoord = (shadowProjectionMatrix0 * positionWS).xyz;
 	colorMultiplier = vec3(0.6 + 0.5 * randomFast1d(osg_MultiTexCoord0.w));
 }

@@ -38,7 +38,7 @@ void main()
 	color.rgb *= colorMultiplier;
 	
 #ifdef ENABLE_SHADOWS
-	float lightVisibility = sampleShadowsAtTexCoord(shadowTexCoord.xy, shadowTexCoord.z - 0.01);
+	float lightVisibility = sampleShadowsAtTexCoord(shadowTexCoord.xy, shadowTexCoord.z - 0.001);
 #else
 	float lightVisibility = 1.0;
 #endif

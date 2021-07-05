@@ -121,7 +121,7 @@ private:
 	std::unique_ptr<PlanetFeatures> mPlanetFeatures;
 	std::unique_ptr<VolumeClouds> mVolumeClouds;
 	std::unique_ptr<class WaveFoamMaskGenerator> mWaveFoamMaskGenerator[WaterStateSetConfig::waveTextureCount];
-	std::unique_ptr<class ShadowMapGenerator> mShadowMapGenerator;
+	std::unique_ptr<class CascadedShadowMapGenerator> mShadowMapGenerator;
 	std::unique_ptr<class BruentonAtmosphere> mAtmosphere;
 
 	osg::Uniform* mPlanetCenterUniform;
@@ -137,7 +137,7 @@ private:
 	osg::Uniform* mCloudCoverageFractionUniform;
 
 	bool mCloudsVisible = false;
-	bool mShadowsEnabled = false; // disabled because shadows are experimental
+	bool mShadowsEnabled = true; // disabled because shadows are experimental
 };
 
 } // namespace vis

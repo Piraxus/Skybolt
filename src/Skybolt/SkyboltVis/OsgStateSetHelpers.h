@@ -18,6 +18,13 @@ inline osg::Uniform* createUniformSampler2d(const std::string& name, int id)
 	return uniform;
 }
 
+inline osg::Uniform* createUniformSampler2dShadow(const std::string& name, int id)
+{
+	osg::Uniform* uniform = new osg::Uniform(osg::Uniform::SAMPLER_2D_SHADOW, name);
+	uniform->set(id);
+	return uniform;
+}
+
 inline osg::Uniform* createArrayOfUniformSampler2d(const std::string& name, int firstId, int numElements)
 {
 	osg::Uniform* uniform = new osg::Uniform(osg::Uniform::SAMPLER_2D, name, numElements);
