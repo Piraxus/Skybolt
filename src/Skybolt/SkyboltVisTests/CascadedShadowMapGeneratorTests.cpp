@@ -48,3 +48,34 @@ TEST_CASE("Calculate cascade to cascade transform")
 	CHECK(q1Expected.y() == Approx(q1.y()).margin(eps));
 	CHECK(q1Expected.z() == Approx(q1.z()).margin(eps));
 }
+
+TEST_CASE("Calculate minimal enclosing sphere of frustum")
+{
+	SECTION("When field of view is wide, the sphere exactly encompases the far plane") {
+		CascadedShadowMapGenerator::Frustum frustum;
+		frustum.aspectRatio = 2.0;
+		frustum.farPlaneDistance = 100;
+		frustum.nearPlaneDistance = 10;
+		frustum.fieldOfViewY = osg::DegreesToRadians(90.f);
+
+		CascadedShadowMapGenerator::FrustumMinimalEnclosingSphere result = CascadedShadowMapGenerator::calculateMinimalEnclosingSphere(frustum);
+
+		float eps = 1e-8f;
+		CHECK(100 == Approx(result.centerDistance).margin(eps));
+		CHECK(2.f * osg::Vec2(100, 50).length() == Approx(result.radius).margin(eps));
+	}
+
+	SECTION("Wide field of view is 0, the sphere exactly encompases the center view vector from near to far plane") {
+		CascadedShadowMapGenerator::Frustum frustum;
+		frustum.aspectRatio = 2.0;
+		frustum.farPlaneDistance = 100;
+		frustum.nearPlaneDistance = 10;
+		frustum.fieldOfViewY = 0.f;
+
+		CascadedShadowMapGenerator::FrustumMinimalEnclosingSphere result = CascadedShadowMapGenerator::calculateMinimalEnclosingSphere(frustum);
+
+		float eps = 1e-8f;
+		CHECK(55 == Approx(result.centerDistance).margin(eps));
+		CHECK(45 == Approx(result.radius).margin(eps));
+	}
+}

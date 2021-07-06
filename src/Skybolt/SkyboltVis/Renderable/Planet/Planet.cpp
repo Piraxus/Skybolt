@@ -757,10 +757,7 @@ void Planet::updatePreRender(const RenderContext& context)
 	if (mShadowMapGenerator && mShadowsEnabled)
 	{
 		mShadowSceneTransform->setMatrix(mTransform->getMatrix());
-
-		osg::Vec3 viewCameraPosition = context.camera.getPosition();
-		osg::Vec3 viewCameraDirection = context.camera.getOrientation() * osg::Vec3f(1, 0, 0);
-		mShadowMapGenerator->update(viewCameraPosition, viewCameraDirection, context.lightDirection, mScene->getWrappedNoiseOrigin());
+		mShadowMapGenerator->update(context.camera, context.lightDirection, mScene->getWrappedNoiseOrigin());
 	}
 
 	osg::Vec3f position = getPosition();

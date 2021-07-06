@@ -1,4 +1,5 @@
 #include "CascadedShadowMapGenerator.h"
+#include "Camera.h"
 #include "ShadowMapGenerator.h"
 #include <assert.h>
 
@@ -9,12 +10,12 @@ static std::vector<float> calculateSplitDistances(size_t cascadeCount, float fir
 {
 	assert(cascadeCount >= 1);
 
-	std::vector<float> splitDistances(cascadeCount-1);
+	std::vector<float> splitDistances(cascadeCount - 1);
 	splitDistances[0] = firstSplitDistance;
 
 	for (size_t i = 1; i < splitDistances.size(); i++)
 	{
-		float fraction = float(i+1) / cascadeCount;
+		float fraction = float(i + 1) / cascadeCount;
 		float logDistance = firstSplitDistance * std::pow(farDistance / firstSplitDistance, fraction);
 		float linDistance = firstSplitDistance + (farDistance - firstSplitDistance) * fraction;
 		float splitDistance = linDistance + lambda * (logDistance - linDistance);
@@ -36,7 +37,7 @@ CascadedShadowMapGenerator::CascadedShadowMapGenerator(osg::ref_ptr<osg::Program
 	}
 }
 
-void CascadedShadowMapGenerator::update(const osg::Vec3& viewCameraPosition, const osg::Vec3& viewCameraDirection, const osg::Vec3& lightDirection, const osg::Vec3& wrappedNoiseOrigin)
+void CascadedShadowMapGenerator::update(const vis::Camera& viewCamera, const osg::Vec3& lightDirection, const osg::Vec3& wrappedNoiseOrigin)
 {
 	calculateSplitDistances(3, 2000, 100000);
 
@@ -45,17 +46,22 @@ void CascadedShadowMapGenerator::update(const osg::Vec3& viewCameraPosition, con
 	for (size_t i = 0; i < mShadowMapGenerators.size(); ++i)
 	{
 		const auto& generator = mShadowMapGenerators[i];
-		
-		double cascadeSize = cascadeBoundingDistances[i+1] - cascadeBoundingDistances[i];
-		generator->setRadiusWorldSpace(cascadeSize * 0.5);
 
-		double cascadeCenterDistance = (cascadeBoundingDistances[i] + cascadeBoundingDistances[i+1]) * 0.5f;
+		Frustum frustum;
+		frustum.fieldOfViewY = viewCamera.getFovY();
+		frustum.aspectRatio = viewCamera.getAspectRatio();
+		frustum.nearPlaneDistance = cascadeBoundingDistances[i];
+		frustum.farPlaneDistance = cascadeBoundingDistances[i + 1];
+		auto result = calculateMinimalEnclosingSphere(frustum);
 
-		osg::Vec3 shadowCameraPosition = viewCameraPosition + viewCameraDirection * cascadeCenterDistance + lightDirection * 5000;
+		generator->setRadiusWorldSpace(result.radius);
+
+		osg::Vec3 viewCameraDirection = viewCamera.getOrientation() * osg::Vec3f(1, 0, 0);
+		osg::Vec3 shadowCameraPosition = viewCamera.getPosition() + viewCameraDirection * result.centerDistance + lightDirection * 5000;
 		generator->update(shadowCameraPosition, lightDirection, wrappedNoiseOrigin);
 	}
 
-	
+
 	for (size_t i = 0; i < mCascadeShadowMatrixModifierUniform.size(); ++i)
 	{
 		mCascadeShadowMatrixModifierUniform[i]->set(calculateCascadeShadowMatrixModifier(i));
@@ -70,15 +76,36 @@ osg::Vec4 CascadedShadowMapGenerator::calculateCascadeToCascadeTransform(const o
 	float offsetY = m1(3, 1) - m0(3, 1) * scale;
 	float offsetZ = m1(3, 2) - m0(3, 2);
 
-	//float oneOnWidth = 1.0f / width0;
-	//float offCenter = 0.5 - 0.5 * width0 / width1;
-
 	return osg::Vec4f(
 		scale,
 		offsetX,
 		offsetY,
 		offsetZ
 	);
+}
+
+CascadedShadowMapGenerator::FrustumMinimalEnclosingSphere CascadedShadowMapGenerator::calculateMinimalEnclosingSphere(const Frustum& frustum)
+{
+	// Technique from https://lxjk.github.io/2017/04/15/Calculate-Minimal-Bounding-Sphere-of-Frustum.html
+	float k = std::sqrt(1 + frustum.aspectRatio * frustum.aspectRatio) * std::tan(frustum.fieldOfViewY / 2.f);
+	float k2 = k * k;
+	float k4 = k2 * k2;
+
+	if (k*k >= (frustum.farPlaneDistance - frustum.nearPlaneDistance) / (frustum.farPlaneDistance + frustum.nearPlaneDistance))
+	{
+		return { frustum.farPlaneDistance, frustum.farPlaneDistance * k };
+	}
+	else
+	{
+		float fPlusN = frustum.farPlaneDistance + frustum.nearPlaneDistance;
+		float centerDistance = 0.5f * fPlusN * (1 + k2);
+		float radius = 0.5f * std::sqrt(
+			osg::square(frustum.farPlaneDistance - frustum.nearPlaneDistance)
+			+ 2 * ( osg::square(frustum.farPlaneDistance) + osg::square(frustum.nearPlaneDistance)) * k2
+			+ osg::square(fPlusN) * k4
+		);
+		return { centerDistance, radius };
+	}
 }
 
 osg::Vec4f CascadedShadowMapGenerator::calculateCascadeShadowMatrixModifier(int i) const

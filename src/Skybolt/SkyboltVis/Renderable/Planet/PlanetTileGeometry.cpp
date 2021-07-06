@@ -90,7 +90,7 @@ osg::Geometry* createPlanetTileGeometry(const osg::Vec3d& tileCenter, const Box2
 
 osg::Geode* createPlanetTileGeode(const osg::Vec3d& tileCenter, const Box2d& latLonBounds, double radius, PrimitiveType type)
 {
-	float skirtLength = 0.001 * radius;
+	float skirtLength = 0.0001 * radius;
 	osg::ref_ptr<osg::Geometry> geometry = createPlanetTileGeometry(tileCenter, latLonBounds, radius, skirtLength, type);
 
 	osg::Geode* geode = new osg::Geode;

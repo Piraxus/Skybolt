@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SkyboltVis/SkyboltVisFwd.h"
 #include <osg/Group>
 #include <osg/Program>
 #include <osg/Texture2D>
@@ -12,7 +13,7 @@ class CascadedShadowMapGenerator
 public:
 	CascadedShadowMapGenerator(osg::ref_ptr<osg::Program> shadowCasterProgram, int cascadeCount);
 
-	void update(const osg::Vec3& viewCameraPosition, const osg::Vec3& viewCameraDirection, const osg::Vec3& lightDirection, const osg::Vec3& wrappedNoiseOrigin);
+	void update(const vis::Camera& viewCamera, const osg::Vec3& lightDirection, const osg::Vec3& wrappedNoiseOrigin);
 
 	void configureShadowReceiverStateSet(osg::StateSet& ss);
 
@@ -25,6 +26,22 @@ public:
 	int getCascadeCount() const { return int(mShadowMapGenerators.size()); }
 
 	static osg::Vec4 calculateCascadeToCascadeTransform(const osg::Matrix m0, const osg::Matrix m1);
+
+	struct Frustum
+	{
+		float nearPlaneDistance;
+		float farPlaneDistance;
+		float fieldOfViewY; //!< field of view about Y axis in radians
+		float aspectRatio; //!< width / height
+	};
+
+	struct FrustumMinimalEnclosingSphere
+	{
+		double centerDistance; //! distance of sphere center from frustum origin along frustum's center ray
+		double radius; //!< radius of sphere
+	};
+
+	static FrustumMinimalEnclosingSphere calculateMinimalEnclosingSphere(const Frustum& frustum);
 
 private:
 	osg::Vec4f calculateCascadeShadowMatrixModifier(int i) const;
