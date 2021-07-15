@@ -105,30 +105,21 @@ ivec4 bilinearFetchIndices(sampler2D tex, vec2 uv, out vec4 weights)
 	return ivec4(c00*255.f + 0.5f, c10*255.f + 0.5f, c01*255.f + 0.5f, c11*255.f + 0.5f);
 }
 
-int attributeIndexFromAlbedo(vec3 albedo)
-{
-	return (albedo.g * 1.5 > albedo.r + albedo.b) ? 1 : 0;
-}
-
 ivec4 bilinearFetchIndicesFromAlbedo(sampler2D tex, vec2 uv, out vec4 weights)
-{// TODO: consider clamping at edges here
-	ivec2 dims = textureSize(tex, 0);
-	vec2 coordFloat = uv * vec2(dims) - 0.5f;
-	ivec2 coordInt = ivec2(floor(coordFloat));
-	vec2 weight = coordFloat - coordInt;
-	coordInt = clamp(coordInt, ivec2(0), dims-ivec2(2));
+{
+	ivec4 indices = ivec4(0, 1, 2, 3);
+	vec3 albedo = texture(tex, uv).rgb;
 	
-	int c00 = attributeIndexFromAlbedo(texelFetch(tex, coordInt, 0).rgb);
-	int c10 = attributeIndexFromAlbedo(texelFetch(tex, coordInt + ivec2(1, 0), 0).rgb);
-	int c01 = attributeIndexFromAlbedo(texelFetch(tex, coordInt + ivec2(0, 1), 0).rgb);
-	int c11 = attributeIndexFromAlbedo(texelFetch(tex, coordInt + ivec2(1, 1), 0).rgb);
-
-	weights.x = (1-weight.x) * (1-weight.y);
-	weights.y = weight.x * (1-weight.y);
-	weights.z = (1-weight.x) * weight.y;
-	weights.w = weight.x * weight.y;
-	return ivec4(c00, c10, c01, c11);
+	float grass = clamp((albedo.g / (albedo.r + albedo.b) - 0.5) * 3.0, 0, 1);
+	float forestConditionalOnGrass = clamp((albedo.g - 0.1) * 5, 0, 1);
+	
+	weights = vec4(0);
+	weights.x = 1.0;
+	weights.y = grass;
+	weights.z = grass * forestConditionalOnGrass;
+	return indices;
 }
+
 
 ivec4 bilinearFetchIndicesWithNoise(sampler2D tex, vec2 uv, out vec4 weights, vec2 noise)
 {// TODO: consider clamping at edges here
@@ -184,6 +175,11 @@ vec4 blend(vec4 texture1, float a1, vec4 texture2, float a2)
     float b2 = max(texture2.a + a2 - ma, 0);  
   
     return (texture1 * b1 + texture2 * b2) / (b1 + b2);  
+}
+
+vec3 blendOverlay(vec3 base, vec3 blend)
+{
+    return mix(1.0 - 2.0 * (1.0 - base) * (1.0 - blend), 2.0 * base * blend, step(base, vec3(0.5)));
 }
 
 #ifdef DETAIL_SAMPLER_COUNT
@@ -248,12 +244,33 @@ vec4 sampleAttributeDetailTextures(vec3 normal, vec2 normalUv)
 #else
 	// Do standard bilinear filtering
 	vec4 attributeColor = vec4(0);
+	
+#define OVERLAY_BLEND
+#ifdef OVERLAY_BLEND
+	float r = texture(coverageDetailSampler2, detailTexCoordPerMeter.xy*0.01).g;
+	
+	vec3 albedoDetailTexCoord = detailAlbedoUvScale[0] * detailTexCoordPerMeter;
+	attributeColor = sampleDetailAlbedo(0, normal, albedoDetailTexCoord, normalUv);
+	
+	vec3 mask = attrWeights.xyz;
+	float noiseStrength = 1.0;
+	mask = blendOverlay(mask, clamp(vec3((r-0.5)*noiseStrength+0.5), vec3(0), vec3(1)));
+	
+	vec4 underlayAttributeColor = sampleDetailAlbedo(1, normal, albedoDetailTexCoord, normalUv);
+	attributeColor = mix(attributeColor, underlayAttributeColor, mask.g);
+	
+	underlayAttributeColor = sampleDetailAlbedo(2, normal, albedoDetailTexCoord, normalUv);
+	attributeColor = mix(attributeColor, underlayAttributeColor, mask.b);
+	
+#else
+	
 	for (int i = 0; i < 4; ++i)
 	{
 		int index = attrIndices[i];
 		vec3 albedoDetailTexCoord = detailAlbedoUvScale[index] * detailTexCoordPerMeter;
 		attributeColor += sampleDetailAlbedo(index, normal, albedoDetailTexCoord, normalUv) * attrWeights[i];
 	}
+#endif
 #endif
 	return attributeColor;
 }
@@ -351,7 +368,7 @@ void main()
 #elif defined(DETAIL_MAPPING_TECHNIQUE_ALBEDO_DERIVED)
 	vec3 attributeColor = sampleAttributeDetailTextures(normal, normalUv).rgb;
 	float albedoBlend = clamp(fragmentViewDistance / 4000, 0.0, 1.0);
-	albedo = mix(attributeColor, albedo, albedoBlend);
+	albedo = mix(attributeColor * (vec3(0.5) + albedo), albedo, albedoBlend);
 #endif
 
 #ifdef ENABLE_SHADOWS
@@ -389,7 +406,7 @@ void main()
 
 	vec3 totalReflectance = albedo * (
 			calcLambertDirectionalLight(lightDirection, normal) * visibleSunIrradiance + 	
-			calcLambertSkyLight(lightDirection, normal) * skyIrradiance * (lightVisibility*0.2+0.8) +
+			calcLambertSkyLight(lightDirection, normal) * skyIrradiance +
 			ambientLightColor
 		)
 		+ specularReflectance;
