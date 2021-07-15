@@ -105,10 +105,21 @@ ivec4 bilinearFetchIndices(sampler2D tex, vec2 uv, out vec4 weights)
 	return ivec4(c00*255.f + 0.5f, c10*255.f + 0.5f, c01*255.f + 0.5f, c11*255.f + 0.5f);
 }
 
-ivec4 bilinearFetchIndicesFromAlbedo(sampler2D tex, vec2 uv, out vec4 weights)
+float saturation(vec3 c)
+{
+	float minColor = min(min(c.r, c.g), c.b);
+	float maxColor = max(max(c.r, c.g), c.b);
+	return (maxColor - minColor) / (maxColor + minColor);
+}
+
+float luminance(vec3 c)
+{
+	return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+ivec4 bilinearFetchIndicesFromAlbedo(vec3 albedo, out vec4 weights)
 {
 	ivec4 indices = ivec4(0, 1, 2, 3);
-	vec3 albedo = texture(tex, uv).rgb;
 	
 	float grass = clamp((albedo.g / (albedo.r + albedo.b) - 0.5) * 3.0, 0, 1);
 	float forestConditionalOnGrass = clamp((albedo.g - 0.1) * 5, 0, 1);
@@ -188,6 +199,16 @@ vec4 sampleDetailAlbedo(int i, vec3 normal, vec3 texCoord, vec2 normalUv)
 	return texture(albedoDetailSamplers[i], texCoord.xy);
 }
 
+vec4 sampleDetailAlbedoMultiScale(int i, vec3 normal, vec3 texCoord, vec2 normalUv)
+{
+	vec4 c = texture(albedoDetailSamplers[i], texCoord.xy);
+	vec4 d = texture(albedoDetailSamplers[i], texCoord.xy * 4);
+	
+	float lod = textureQueryLod(albedoDetailSamplers[i], texCoord.xy).r;
+	
+	return mix(c, d, clamp(1-lod*0.5, 0, 1));
+}
+
 vec4 sampleDetailTexture()
 {
 	vec3 detailTexCoordPerMeter = wrappedNoiseCoord * 10000.0; // repeats [0,1) per meter
@@ -195,9 +216,9 @@ vec4 sampleDetailTexture()
 	return texture(albedoDetailSamplers[0], texCoord.xy);
 }
 
-vec4 sampleAttributeDetailTextures(vec3 normal, vec2 normalUv)
+vec4 sampleAttributeDetailTextures(vec3 normal, vec2 normalUv, vec3 albedo)
 {
-	vec3 detailTexCoordPerMeter = wrappedNoiseCoord * 10000.0; // repeats [0,1) per meter
+	vec3 detailTexCoordPerMeter = wrappedNoiseCoord * 5000.0; // repeats [0,1) per meter
 	vec2 attributeTexCoord = texCoord.xy * attributeMapUvScale + attributeMapUvOffset;
 
 	// Sample and blend attribute albedos
@@ -209,7 +230,7 @@ vec4 sampleAttributeDetailTextures(vec3 normal, vec2 normalUv)
 	//ivec4 attrIndices = fetchIndicesWithNoise(attributeSampler, attributeTexCoord, attrWeights, noise);
 #else
 	vec2 albedoTexCoord = texCoord.xy * overallAlbedoMapUvScale + overallAlbedoMapUvOffset;
-	ivec4 attrIndices = bilinearFetchIndicesFromAlbedo(overallAlbedoSampler, albedoTexCoord, attrWeights);
+	ivec4 attrIndices = bilinearFetchIndicesFromAlbedo(albedo, attrWeights);
 #endif
 
 //#define DETAIL_HEIGHTMAP_BLEND
@@ -250,16 +271,19 @@ vec4 sampleAttributeDetailTextures(vec3 normal, vec2 normalUv)
 	float r = texture(coverageDetailSampler2, detailTexCoordPerMeter.xy*0.01).g;
 	
 	vec3 albedoDetailTexCoord = detailAlbedoUvScale[0] * detailTexCoordPerMeter;
-	attributeColor = sampleDetailAlbedo(0, normal, albedoDetailTexCoord, normalUv);
+	attributeColor = sampleDetailAlbedoMultiScale(0, normal, albedoDetailTexCoord, normalUv);
+	
+	float dirtSaturation = saturation(albedo);
+	attributeColor = mix(attributeColor, vec4(luminance(attributeColor.rgb)), max(0.0, 1-dirtSaturation));
 	
 	vec3 mask = attrWeights.xyz;
 	float noiseStrength = 1.0;
 	mask = blendOverlay(mask, clamp(vec3((r-0.5)*noiseStrength+0.5), vec3(0), vec3(1)));
 	
-	vec4 underlayAttributeColor = sampleDetailAlbedo(1, normal, albedoDetailTexCoord, normalUv);
+	vec4 underlayAttributeColor = sampleDetailAlbedoMultiScale(1, normal, albedoDetailTexCoord, normalUv);
 	attributeColor = mix(attributeColor, underlayAttributeColor, mask.g);
 	
-	underlayAttributeColor = sampleDetailAlbedo(2, normal, albedoDetailTexCoord, normalUv);
+	underlayAttributeColor = sampleDetailAlbedoMultiScale(2, normal, albedoDetailTexCoord, normalUv);
 	attributeColor = mix(attributeColor, underlayAttributeColor, mask.b);
 	
 #else
@@ -366,9 +390,11 @@ void main()
 #if defined(DETAIL_MAPPING_TECHNIQUE_UNIFORM)
 	albedo += (dot(vec3(0.33333), sampleDetailTexture().rgb) - vec3(0.5))*0.6;
 #elif defined(DETAIL_MAPPING_TECHNIQUE_ALBEDO_DERIVED)
-	vec3 attributeColor = sampleAttributeDetailTextures(normal, normalUv).rgb;
-	float albedoBlend = clamp(fragmentViewDistance / 4000, 0.0, 1.0);
+	vec3 attributeColor = 0.9*sampleAttributeDetailTextures(normal, normalUv, albedo).rgb;
+	float albedoBlend = clamp(fragmentViewDistance / 8000, 0.0, 1.0);
+	
 	albedo = mix(attributeColor * (vec3(0.5) + albedo), albedo, albedoBlend);
+	//albedo = mix(attributeColor, albedo, albedoBlend);
 #endif
 
 #ifdef ENABLE_SHADOWS

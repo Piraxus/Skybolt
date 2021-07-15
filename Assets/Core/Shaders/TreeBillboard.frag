@@ -47,7 +47,7 @@ void main()
 	float lightVisibility = 1.0;
 #endif
 	
-	color.rgb = randomizeColor(color.rgb, perTreeUnitRandom);
+	color.rgb = randomizeColor(color.rgb, perTreeUnitRandom)*vec3(0.7,1,1.2);
 	color.rgb *= calcLambertSkyLight(lightDirection, normal)
 	* (sunIrradiance * lightVisibility + skyIrradiance) + ambientLightColor;	
 	color.rgb = color.rgb * transmittance + skyRadianceToPoint;

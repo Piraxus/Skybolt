@@ -85,8 +85,9 @@ void main()
 #ifdef CAST_SHADOWS
 	posRelCamera = vec3(worldPos.xyz - viewCameraPosition);
 #endif
-	fragmentViewDistance = length(posRelCamera);
-	float visibility = clamp((maxVisibilityRange*1.1 - fragmentViewDistance)*0.001, 0.0f, 1.0f);
+	fragmentViewDistance = length(posRelCamera) + yawIndex * 300;
+	//float visibility = clamp((maxVisibilityRange*1.1 - fragmentViewDistance)*0.001, 0.0f, 1.0f);
+	float visibility = (fragmentViewDistance < maxVisibilityRange) ? 1.0 : 0.0;
 	
 	vec3 posOffset = rightDir * (x - 0.5) * billboardSize.x + upDir * y * billboardSize.y * visibility;
 	pos.xyz += posOffset;
